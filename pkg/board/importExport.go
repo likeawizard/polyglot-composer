@@ -379,6 +379,7 @@ func (b *Board) getMoveWithFromTo(from, to, dis, promo string) Move {
 			return move
 		}
 	}
-	panic([]string{"failed to decode from SAN", from, to, dis})
+	fmt.Println("failed to decode from SAN", from, to, dis, promo, b.ExportFEN())
+	panic(1)
 	return 0
 }
