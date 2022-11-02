@@ -53,6 +53,70 @@ type PGN struct {
 	Moves           string
 }
 
+type PGNParser struct {
+	file     *os.File
+	scanner  *bufio.Scanner
+	pgn      *PGN
+	nextLine string
+}
+
+func NewPGNParser(path string) (*PGNParser, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("error opening PGN:", err)
+	}
+
+	scanner := bufio.NewScanner(bufio.NewReader(file))
+	return &PGNParser{scanner: scanner, file: file}, nil
+}
+
+func (pp *PGNParser) Scan() {
+	pp.pgn = nil
+	pgn := PGN{}
+	if pp.nextLine != "" {
+		pgn.AddTag(parseTag(pp.nextLine))
+		pp.nextLine = ""
+	}
+	for pp.scanner.Scan() {
+		line := pp.scanner.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		if isTag(line) {
+			tag, value := parseTag(line)
+			if tag == TAG_EVENT && pgn.Event != "" {
+				pp.pgn = &pgn
+				pp.nextLine = line
+				return
+			}
+
+			pgn.AddTag(tag, value)
+
+		} else {
+			pgn.Moves += line
+		}
+	}
+
+	if pp.pgn == nil && pgn.Event != "" {
+		pp.pgn = &pgn
+	}
+
+}
+
+func (pp *PGNParser) Next() *PGN {
+	pp.Scan()
+	if pp.pgn != nil {
+		pp.pgn.RemoveAnnotations()
+	}
+
+	return pp.pgn
+
+}
+
+func (pp *PGNParser) Close() error {
+	return pp.file.Close()
+}
+
 func ParsePGN(path string) PGNs {
 	file, err := os.Open(path)
 	if err != nil {
