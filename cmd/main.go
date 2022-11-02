@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
 	"github.com/likeawizard/polyglot-composer/pkg/polyglot"
@@ -18,22 +19,32 @@ func main() {
 		fmt.Println("no pgn provided")
 		return
 	}
-
-	pp, err := pgn.NewPGNParser(pgn_path)
-
-	if err != nil {
-		fmt.Println("could not load pgn")
-		return
-	} else {
-		defer pp.Close()
-	}
-
 	n := 0
 	pb := make(polyglot.PolyglotBook, 0)
-	for pgn := pp.Next(); pgn != nil; pgn = pp.Next() {
-		n++
-		pb.AddFromPGN(pgn)
+	paths := strings.Split(pgn_path, ",")
+
+	for _, path := range paths {
+		pp, err := pgn.NewPGNParser(path)
+
+		if err != nil {
+			fmt.Printf("could not load pgn file: %s with error: %s\n", path, err)
+			continue
+		} else {
+			fmt.Printf("Parsing '%s' ...\n", path)
+		}
+
+		for pgn := pp.Next(); pgn != nil; pgn = pp.Next() {
+			n++
+			pb.AddFromPGN(pgn)
+			if n%100 == 0 {
+				pp.Progress(false)
+			}
+		}
+		pp.Close()
+		pp.Progress(true)
+		fmt.Println()
 	}
+
 	fmt.Printf("games parsed:%d, book keys %d\n", n, len(pb))
 	pb.SaveBook(out_path)
 }
