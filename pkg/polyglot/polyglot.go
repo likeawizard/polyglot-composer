@@ -25,15 +25,16 @@ const (
 	black_king
 	white_king
 
-	entrySize = 16
-	sideHash  = 780
+	entrySize        = 16
+	sideHash         = 780
+	maxUInt16 uint64 = 65535
 )
 
 type PolyglotBook map[uint64][]polyEntry
 
 type polyEntry struct {
 	move   string
-	weight uint16
+	weight uint64
 }
 
 func decodeBookEntry(bytes []byte) (uint64, polyEntry) {
@@ -41,14 +42,14 @@ func decodeBookEntry(bytes []byte) (uint64, polyEntry) {
 	move := binary.BigEndian.Uint16(bytes[8:10])
 	weight := binary.BigEndian.Uint16(bytes[10:12])
 
-	return key, polyEntry{move: polyMoveToUCI(move), weight: weight}
+	return key, polyEntry{move: polyMoveToUCI(move), weight: uint64(weight)}
 }
 
 func encodeBookEntry(key uint64, entry polyEntry) []byte {
 	bytes := make([]byte, 0)
 	bytes = binary.BigEndian.AppendUint64(bytes, key)
 	bytes = binary.BigEndian.AppendUint16(bytes, UCIToPolyMove(entry.move))
-	bytes = binary.BigEndian.AppendUint16(bytes, entry.weight)
+	bytes = binary.BigEndian.AppendUint16(bytes, uint16(entry.weight))
 	bytes = binary.BigEndian.AppendUint32(bytes, 0)
 
 	return bytes
@@ -113,7 +114,7 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 	}
 }
 
-func (pb *PolyglotBook) AddMove(key uint64, move string, weight uint16) {
+func (pb *PolyglotBook) AddMove(key uint64, move string, weight uint64) {
 	moves, ok := (*pb)[key]
 	if ok {
 		for i := 0; i < len(moves); i++ {
@@ -204,6 +205,7 @@ func LoadBook(path string) PolyglotBook {
 }
 
 func (pb *PolyglotBook) SaveBook(path string) {
+	pb.NormalizeAndOrder()
 	type orderedEntry struct {
 		key   uint64
 		entry []polyEntry
@@ -231,9 +233,7 @@ func (pb *PolyglotBook) SaveBook(path string) {
 
 	for _, moves := range orderedBook {
 		for _, move := range moves.entry {
-			// fmt.Println("writing")
 			entry := encodeBookEntry(moves.key, move)
-			// fmt.Println(len(entry))
 			_, err := writer.Write(entry)
 			if err != nil {
 				fmt.Println("Error writing:", err)
@@ -305,4 +305,32 @@ func PolyZobrist(b *board.Board) uint64 {
 	}
 
 	return hash
+}
+
+// Building a book from a large number of games can exceed the limits of uint16.
+// Find entries where a weight exceeds this limit and normalize the whole entry
+func (pb *PolyglotBook) NormalizeAndOrder() {
+	normalize := func(entries []polyEntry) []polyEntry {
+		var i int
+		for i = len(entries); i >= 0; i-- {
+			if (entries[0].weight / entries[i].weight) < maxUInt16 {
+				break
+			}
+		}
+		newEntries := make([]polyEntry, i+1)
+		for j := 0; j <= i; j++ {
+			newEntries[j] = polyEntry{move: entries[j].move, weight: entries[j].weight / entries[i].weight}
+		}
+		return newEntries
+	}
+
+	for key, entries := range *(pb) {
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].weight > entries[j].weight
+		})
+		if entries[0].weight > maxUInt16 {
+			entries = normalize(entries)
+		}
+		(*pb)[key] = entries
+	}
 }

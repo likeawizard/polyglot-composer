@@ -4,11 +4,13 @@ import (
 	"bufio"
 	"compress/bzip2"
 	"fmt"
+	"math"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/likeawizard/polyglot-composer/pkg/board"
 )
 
@@ -55,10 +57,13 @@ type PGN struct {
 }
 
 type PGNParser struct {
-	file     *os.File
-	scanner  *bufio.Scanner
-	pgn      *PGN
-	nextLine string
+	file       *os.File
+	isArchived bool
+	totalSize  bytesize.ByteSize
+	bytesRead  bytesize.ByteSize
+	scanner    *bufio.Scanner
+	pgn        *PGN
+	nextLine   string
 }
 
 func NewPGNParser(path string) (*PGNParser, error) {
@@ -67,15 +72,23 @@ func NewPGNParser(path string) (*PGNParser, error) {
 		return nil, fmt.Errorf("error opening PGN:", err)
 	}
 
+	size := float64(1)
+	stat, err := file.Stat()
+	if err == nil {
+		size = float64(stat.Size())
+	}
+
 	var scanner *bufio.Scanner
+	var archive bool
 	if strings.HasSuffix(path, "bz2") {
+		archive = true
 		bzReader := bzip2.NewReader(file)
 		scanner = bufio.NewScanner(bufio.NewReader(bzReader))
 	} else {
 		scanner = bufio.NewScanner(bufio.NewReader(file))
 	}
 
-	return &PGNParser{scanner: scanner, file: file}, nil
+	return &PGNParser{scanner: scanner, file: file, isArchived: archive, totalSize: bytesize.New(size)}, nil
 }
 
 func (pp *PGNParser) Scan() {
@@ -86,6 +99,7 @@ func (pp *PGNParser) Scan() {
 		pp.nextLine = ""
 	}
 	for pp.scanner.Scan() {
+		pp.bytesRead += bytesize.New(float64(len(pp.scanner.Bytes())))
 		line := pp.scanner.Text()
 		if strings.TrimSpace(line) == "" {
 			continue
@@ -119,6 +133,21 @@ func (pp *PGNParser) Next() *PGN {
 
 	return pp.pgn
 
+}
+
+func (pp *PGNParser) Progress(done bool) {
+	progress := math.Min(float64(pp.bytesRead)/float64(pp.totalSize), 1)
+	if done {
+		progress = 1
+	}
+	barN := int(50 * progress)
+	bar := "[" + strings.Repeat("#", barN) + strings.Repeat("-", 50-barN) + "]"
+	output := fmt.Sprintf("%s %.2f%%, read: %v, total: %v", bar, 100*progress, pp.bytesRead, pp.totalSize)
+	if pp.isArchived {
+		output += " (archived size)"
+	}
+
+	fmt.Printf("%s\r", output)
 }
 
 func (pp *PGNParser) Close() error {
