@@ -2,6 +2,7 @@ package pgn
 
 import (
 	"bufio"
+	"compress/bzip2"
 	"fmt"
 	"os"
 	"regexp"
@@ -66,7 +67,14 @@ func NewPGNParser(path string) (*PGNParser, error) {
 		return nil, fmt.Errorf("error opening PGN:", err)
 	}
 
-	scanner := bufio.NewScanner(bufio.NewReader(file))
+	var scanner *bufio.Scanner
+	if strings.HasSuffix(path, "bz2") {
+		bzReader := bzip2.NewReader(file)
+		scanner = bufio.NewScanner(bufio.NewReader(bzReader))
+	} else {
+		scanner = bufio.NewScanner(bufio.NewReader(file))
+	}
+
 	return &PGNParser{scanner: scanner, file: file}, nil
 }
 
