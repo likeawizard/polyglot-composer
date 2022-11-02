@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -71,6 +72,7 @@ func ParsePGN(path string) PGNs {
 		if isTag(line) {
 			tag, value := parseTag(line)
 			if tag == TAG_EVENT && pgn.Event != "" {
+				pgn.RemoveAnnotations()
 				pgns = append(pgns, pgn)
 				pgn = PGN{}
 			}
@@ -83,6 +85,7 @@ func ParsePGN(path string) PGNs {
 	}
 
 	if pgn.Event != "" {
+		pgn.RemoveAnnotations()
 		pgns = append(pgns, pgn)
 		pgn = PGN{}
 	}
@@ -140,4 +143,15 @@ func (pgn *PGN) MovesToUCI() []string {
 	}
 
 	return moves
+}
+
+func (pgn *PGN) RemoveAnnotations() {
+	// Removes: move number continuation after variation `3...`, variation `(*)`, comments `{*}`, special characters `[+#?!]`
+	re := regexp.MustCompile(`\d+\.\.\.|\([^()]*\)|\{[^{}]*\}|[!?+#]`)
+	whiteSpace := regexp.MustCompile(`\s+`)
+	empty := ""
+	text := re.ReplaceAll([]byte(pgn.Moves), []byte(empty))
+	text = whiteSpace.ReplaceAll(text, []byte(" "))
+	pgn.Moves = string(text)
+
 }
