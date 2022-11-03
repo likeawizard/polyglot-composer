@@ -309,13 +309,17 @@ func (b *Board) SANToMove(san string) Move {
 			from = from[:1]
 		}
 	default:
-		if len(san) == 3 {
+		if len(san) == 3 { // Default move ie Qe3
 			from = san[:1]
 			to = san[1:3]
-		} else {
+		} else if len(san) == 4 { // Move with single disambiguation rank/file ie Rhe8 or R8e3
 			from = san[:1]
 			disambiguation = san[1:2]
 			to = san[2:4]
+		} else if len(san) == 5 { // Double disambiguation Qe8h5
+			from = san[:1]
+			disambiguation = san[1:3]
+			to = san[3:5]
 		}
 	}
 	return b.getMoveWithFromTo(from, to, disambiguation, promo)
@@ -352,26 +356,32 @@ func (b *Board) getMoveWithFromTo(from, to, dis, promo string) Move {
 			movePromo = strings.ToUpper(move.String()[4:])
 		}
 		if dis != "" {
-			rank, err := strconv.Atoi(dis)
-			if err == nil {
-				rank = 7 - (rank - 1)
-				if move.Piece() == piece && move.To().String() == to && int(move.From())/8 == rank && movePromo == promo {
+			if len(dis) == 2 {
+				if move.Piece() == piece && move.To().String() == to && move.From().String() == dis && movePromo == promo {
 					return move
 				}
 			} else {
-				files := map[string]int{
-					"a": 0,
-					"b": 1,
-					"c": 2,
-					"d": 3,
-					"e": 4,
-					"f": 5,
-					"g": 6,
-					"h": 7,
-				}
-				file := files[dis]
-				if move.Piece() == piece && move.To().String() == to && int(move.From())%8 == file && movePromo == promo {
-					return move
+				rank, err := strconv.Atoi(dis)
+				if err == nil {
+					rank = 7 - (rank - 1)
+					if move.Piece() == piece && move.To().String() == to && int(move.From())/8 == rank && movePromo == promo {
+						return move
+					}
+				} else {
+					files := map[string]int{
+						"a": 0,
+						"b": 1,
+						"c": 2,
+						"d": 3,
+						"e": 4,
+						"f": 5,
+						"g": 6,
+						"h": 7,
+					}
+					file := files[dis]
+					if move.Piece() == piece && move.To().String() == to && int(move.From())%8 == file && movePromo == promo {
+						return move
+					}
 				}
 			}
 
