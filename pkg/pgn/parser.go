@@ -248,7 +248,7 @@ func (pgn *PGN) MovesToUCI() []string {
 
 func (pgn *PGN) RemoveAnnotations() {
 	// Removes: move number continuation after variation `3...`, variation `(*)`, comments `{*}`, special characters `[+#?!]`
-	re := regexp.MustCompile(`\d+\.\.\.|\([^()]*\)|\{[^{}]*\}|[!?+#]`)
+	re := regexp.MustCompile(`\d+\.\.\.|\([^()]*\)|\{[^{}]*\}|[!?+#*]`)
 	whiteSpace := regexp.MustCompile(`\s+`)
 	empty := ""
 	text := re.ReplaceAll([]byte(pgn.Moves), []byte(empty))
