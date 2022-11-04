@@ -19,8 +19,8 @@ Run `make build` to compile polyglot-composer
 ## Known issues and planned features
 * ~~Annotated PGNs currently not supported~~ Supported.
 * Allow a directory to be passed as input and parse all files within
-* Add filtering on PGN tags (ELO ranges and differences, Time Control, Variant, etc...)
-* Makes no distinction between games won by checkmate or timeout or other termination of games
+* ~~Add filtering on PGN tags (ELO ranges and differences, Time Control, Variant, etc...)~~ Hardcoded filters. WIP.
+* ~~Makes no distinction between games won by checkmate or timeout or other termination of games~~ Fixed.
 * Compose book directly from lichess user id
 * Compose FEN list for texel tuning based from PGNs and book
 
