@@ -142,7 +142,7 @@ func (pgn *PGN) MovesToUCI() []string {
 	if count > moveLimit {
 		count = moveLimit
 	}
-	moves := make([]string, count)
+	moves := make([]string, 0)
 	bb := &board.Board{}
 	bb.InitDefault()
 
@@ -150,8 +150,11 @@ func (pgn *PGN) MovesToUCI() []string {
 		if i > moveLimit-1 {
 			break
 		}
-		move := bb.SANToMove(san)
-		moves[i] = move.String()
+		move, err := bb.SANToMove(san)
+		if err != nil {
+			break
+		}
+		moves = append(moves, move.String())
 		bb.MakeMove(move)
 	}
 

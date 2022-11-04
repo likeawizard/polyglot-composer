@@ -5,7 +5,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/likeawizard/polyglot-composer/pkg/board"
@@ -36,15 +38,15 @@ type PolyglotBook struct {
 	book map[uint64][]polyEntry
 }
 
+type polyEntry struct {
+	move   string
+	weight uint64
+}
+
 func NewPolyglotBook() *PolyglotBook {
 	return &PolyglotBook{
 		book: make(map[uint64][]polyEntry),
 	}
-}
-
-type polyEntry struct {
-	move   string
-	weight uint64
 }
 
 func decodeBookEntry(bytes []byte) (uint64, polyEntry) {
@@ -93,34 +95,38 @@ func MoveToPolyMove(move board.Move) string {
 }
 
 func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
-	moves := pgn.MovesToUCI()
+	const moveLimit = 40
 	b := &board.Board{}
 	b.Init()
 
-	for _, move := range moves {
-		ms := b.MoveGen()
-		var eMove board.Move
-		for _, m := range ms {
-			if m.String() == move {
-				eMove = m
-				break
-			}
+	//Remove move counters and score at the end
+	re := regexp.MustCompile(`\d+\.\s|\s1-0|\s0-1|\s1\/2-1\/2`)
+	movesSAN := re.ReplaceAllLiteralString(pgn.Moves, "")
+	SANs := strings.Fields(movesSAN)
+
+	for i, san := range SANs {
+		if i > moveLimit-1 {
+			break
 		}
+		move, err := b.SANToMove(san)
+		if err != nil {
+			//TODO: log SAN with PGN on error
+			break
+		}
+
 		switch {
 		case b.Side == board.WHITE && pgn.Result == "1-0" || b.Side == board.BLACK && pgn.Result == "0-1":
-			pb.lock.Lock()
-			pb.AddMove(PolyZobrist(b), MoveToPolyMove(eMove), 2)
-			pb.lock.Unlock()
+			pb.AddMove(PolyZobrist(b), MoveToPolyMove(move), 2)
 		case pgn.Result != "0-1" && pgn.Result != "1-0":
-			pb.lock.Lock()
-			pb.AddMove(PolyZobrist(b), MoveToPolyMove(eMove), 1)
-			pb.lock.Unlock()
+			pb.AddMove(PolyZobrist(b), MoveToPolyMove(move), 1)
 		}
-		b.MakeMove(eMove)
+		b.MakeMove(move)
 	}
 }
 
 func (pb *PolyglotBook) AddMove(key uint64, move string, weight uint64) {
+	pb.lock.Lock()
+	defer pb.lock.Unlock()
 	moves, ok := pb.book[key]
 	if ok {
 		for i := 0; i < len(moves); i++ {

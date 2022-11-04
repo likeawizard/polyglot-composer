@@ -273,7 +273,7 @@ func (b *Board) Disambiguate(move string) string {
 	return dis
 }
 
-func (b *Board) SANToMove(san string) Move {
+func (b *Board) SANToMove(san string) (Move, error) {
 	// Remove check or checkmate symbol
 	if strings.HasSuffix(san, "+") || strings.HasSuffix(san, "#") {
 		san = san[:len(san)-1]
@@ -286,15 +286,15 @@ func (b *Board) SANToMove(san string) Move {
 	// Castling moves
 	case san == "O-O-O":
 		if b.Side == WHITE {
-			return WCastleQueen
+			return WCastleQueen, nil
 		} else {
-			return BCastleQueen
+			return BCastleQueen, nil
 		}
 	case san == "O-O":
 		if b.Side == WHITE {
-			return WCastleKing
+			return WCastleKing, nil
 		} else {
-			return BCastleKing
+			return BCastleKing, nil
 		}
 	// Pawn push
 	case len(san) == 2:
@@ -325,7 +325,7 @@ func (b *Board) SANToMove(san string) Move {
 	return b.getMoveWithFromTo(from, to, disambiguation, promo)
 }
 
-func (b *Board) getMoveWithFromTo(from, to, dis, promo string) Move {
+func (b *Board) getMoveWithFromTo(from, to, dis, promo string) (Move, error) {
 	moves := b.MoveGen()
 	piece := PAWNS
 	if from == strings.ToUpper(from) {
@@ -358,14 +358,14 @@ func (b *Board) getMoveWithFromTo(from, to, dis, promo string) Move {
 		if dis != "" {
 			if len(dis) == 2 {
 				if move.Piece() == piece && move.To().String() == to && move.From().String() == dis && movePromo == promo {
-					return move
+					return move, nil
 				}
 			} else {
 				rank, err := strconv.Atoi(dis)
 				if err == nil {
 					rank = 7 - (rank - 1)
 					if move.Piece() == piece && move.To().String() == to && int(move.From())/8 == rank && movePromo == promo {
-						return move
+						return move, nil
 					}
 				} else {
 					files := map[string]int{
@@ -380,16 +380,14 @@ func (b *Board) getMoveWithFromTo(from, to, dis, promo string) Move {
 					}
 					file := files[dis]
 					if move.Piece() == piece && move.To().String() == to && int(move.From())%8 == file && movePromo == promo {
-						return move
+						return move, nil
 					}
 				}
 			}
 
 		} else if move.Piece() == piece && move.To().String() == to {
-			return move
+			return move, nil
 		}
 	}
-	fmt.Println("failed to decode from SAN", from, to, dis, promo, b.ExportFEN())
-	panic(1)
-	return 0
+	return 0, fmt.Errorf("unable to convert SAN to move with: from '%s', to '%s', dis '%s', promo '%s'", from, to, dis, promo)
 }
