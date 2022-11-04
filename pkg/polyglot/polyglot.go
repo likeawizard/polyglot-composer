@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"sync"
 
 	"github.com/likeawizard/polyglot-composer/pkg/board"
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
@@ -30,7 +31,16 @@ const (
 	maxUInt16 uint64 = 65535
 )
 
-type PolyglotBook map[uint64][]polyEntry
+type PolyglotBook struct {
+	lock sync.Mutex
+	book map[uint64][]polyEntry
+}
+
+func NewPolyglotBook() *PolyglotBook {
+	return &PolyglotBook{
+		book: make(map[uint64][]polyEntry),
+	}
+}
 
 type polyEntry struct {
 	move   string
@@ -82,14 +92,6 @@ func MoveToPolyMove(move board.Move) string {
 	}
 }
 
-func BuildFromPGNs(pgns pgn.PGNs) *PolyglotBook {
-	pb := make(PolyglotBook, 0)
-	for _, pgn := range pgns {
-		pb.AddFromPGN(&pgn)
-	}
-	return &pb
-}
-
 func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 	moves := pgn.MovesToUCI()
 	b := &board.Board{}
@@ -106,29 +108,33 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 		}
 		switch {
 		case b.Side == board.WHITE && pgn.Result == "1-0" || b.Side == board.BLACK && pgn.Result == "0-1":
+			pb.lock.Lock()
 			pb.AddMove(PolyZobrist(b), MoveToPolyMove(eMove), 2)
+			pb.lock.Unlock()
 		case pgn.Result != "0-1" && pgn.Result != "1-0":
+			pb.lock.Lock()
 			pb.AddMove(PolyZobrist(b), MoveToPolyMove(eMove), 1)
+			pb.lock.Unlock()
 		}
 		b.MakeMove(eMove)
 	}
 }
 
 func (pb *PolyglotBook) AddMove(key uint64, move string, weight uint64) {
-	moves, ok := (*pb)[key]
+	moves, ok := pb.book[key]
 	if ok {
 		for i := 0; i < len(moves); i++ {
 			if moves[i].move == move {
 				moves[i].weight++
-				(*pb)[key] = moves
+				pb.book[key] = moves
 				return
 			}
 		}
 		moves = append(moves, polyEntry{move: move, weight: weight})
-		(*pb)[key] = moves
+		pb.book[key] = moves
 		return
 	} else {
-		(*pb)[key] = []polyEntry{{move: move, weight: weight}}
+		pb.book[key] = []polyEntry{{move: move, weight: weight}}
 	}
 }
 
@@ -180,12 +186,12 @@ func UCIToPolyMove(move string) uint16 {
 	return polyMove
 }
 
-func LoadBook(path string) PolyglotBook {
+func LoadBook(path string) *PolyglotBook {
 	file, err := os.Open(path)
 	if err != nil {
 		fmt.Println("failed to open book: ", path)
 	}
-	polyBook := make(PolyglotBook)
+	polyBook := NewPolyglotBook()
 	buffer := make([]byte, entrySize)
 	reader := bufio.NewReader(file)
 
@@ -194,7 +200,7 @@ func LoadBook(path string) PolyglotBook {
 			continue
 		}
 		key, entry := decodeBookEntry(buffer)
-		polyBook[key] = append(polyBook[key], entry)
+		polyBook.book[key] = append(polyBook.book[key], entry)
 	}
 
 	if err != nil {
@@ -210,10 +216,10 @@ func (pb *PolyglotBook) SaveBook(path string) {
 		key   uint64
 		entry []polyEntry
 	}
-	orderedBook := make([]orderedEntry, len(*(pb)))
+	orderedBook := make([]orderedEntry, len(pb.book))
 	n := 0
 
-	for key, moves := range *(pb) {
+	for key, moves := range pb.book {
 		orderedBook[n] = orderedEntry{key: key, entry: moves}
 		n++
 	}
@@ -312,7 +318,7 @@ func PolyZobrist(b *board.Board) uint64 {
 func (pb *PolyglotBook) NormalizeAndOrder() {
 	normalize := func(entries []polyEntry) []polyEntry {
 		var i int
-		for i = len(entries); i >= 0; i-- {
+		for i = len(entries) - 1; i >= 0; i-- {
 			if (entries[0].weight / entries[i].weight) < maxUInt16 {
 				break
 			}
@@ -324,13 +330,13 @@ func (pb *PolyglotBook) NormalizeAndOrder() {
 		return newEntries
 	}
 
-	for key, entries := range *(pb) {
+	for key, entries := range pb.book {
 		sort.Slice(entries, func(i, j int) bool {
 			return entries[i].weight > entries[j].weight
 		})
 		if entries[0].weight > maxUInt16 {
 			entries = normalize(entries)
 		}
-		(*pb)[key] = entries
+		pb.book[key] = entries
 	}
 }
