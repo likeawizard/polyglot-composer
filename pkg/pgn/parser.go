@@ -47,13 +47,12 @@ func NewPGNParser(path string) (*PGNParser, error) {
 	return pp, nil
 }
 
-func (pp *PGNParser) Scan() {
+// Scan the PGN file for the next game meeting the criteria defined by filters. The game can be accessed by calling the PGN method
+func (pp *PGNParser) Scan() bool {
 	pp.pgn = nil
-	pgn := PGN{}
-	var tag Tag
-	var value string
+	pp.tempPGN = &PGN{}
 	if pp.nextLine != "" {
-		pgn.AddTag(parseTag(pp.nextLine))
+		pp.tempPGN.AddTag(parseTag(pp.nextLine))
 		pp.nextLine = ""
 	}
 	for pp.scanner.Scan() {
@@ -69,47 +68,50 @@ func (pp *PGNParser) Scan() {
 			continue
 		}
 		if isTag(line) {
-			tag, value = parseTag(line)
+			pp.tag, pp.value = parseTag(line)
 			if !pp.skipping {
-				pp.skipping = !PreFilter(tag, value)
+				pp.skipping = !PreFilter(pp.tag, pp.value)
 			}
-			if tag == TAG_EVENT && pgn.Event != "" {
+			if pp.tag == TAG_EVENT && pp.tempPGN.Event != "" {
 				if pp.skipping {
-					pgn = PGN{Event: value}
+					pp.tempPGN = &PGN{Event: pp.value}
 					pp.skipping = false
 				} else {
-					pp.pgn = &pgn
+					pp.pgn = pp.tempPGN
 					pp.nextLine = line
-					return
+					pp.gameCount++
+					return true
 				}
 			}
 
-			pgn.AddTag(tag, value)
+			pp.tempPGN.AddTag(pp.tag, pp.value)
 
 		} else {
-			pgn.Moves += line
+			pp.tempPGN.Moves += line
 		}
 	}
 
-	if pp.pgn == nil && pgn.Event != "" {
-		pp.pgn = &pgn
+	if pp.pgn == nil && pp.tempPGN.Event != "" {
+		pp.pgn = pp.tempPGN
+		pp.gameCount++
 	}
+
+	return false
+}
+
+func (pp *PGNParser) PGN() *PGN {
+	return pp.pgn
 
 }
 
 func (pp *PGNParser) Next() *PGN {
 	pp.Scan()
-	if pp.pgn != nil {
-		pp.pgn.RemoveAnnotations()
-	}
-	pp.gameCount++
 	return pp.pgn
-
 }
 
 func (pp *PGNParser) Progress(done bool) {
 	ratio := 1.0
-	if pp.bzipReader.InputOffset > 0 || pp.bzipReader.OutputOffset > 0 {
+	if pp.bzipReader != nil && pp.bzipReader.InputOffset > 0 && pp.bzipReader.OutputOffset > 0 {
 		ratio = float64(pp.bzipReader.OutputOffset) / float64(pp.bzipReader.InputOffset)
 	}
 	progress := math.Min(float64(pp.readBytes)/float64(pp.totalBytes)/ratio, 1)
@@ -120,7 +122,7 @@ func (pp *PGNParser) Progress(done bool) {
 	bar := "[" + strings.Repeat("#", barN) + strings.Repeat(".", 50-barN) + "]"
 	output := fmt.Sprintf("%s %.2f%%, games: %d rate: %v/s read: %v, total: %v", bar, 100*progress, pp.gameCount, pp.lastBytes, pp.readBytes, pp.totalBytes*bytesize.New(ratio))
 	if pp.isArchived {
-		output += " (archived size)            "
+		output += " (estimate)                       "
 	}
 
 	fmt.Printf("%s\r", output)
@@ -161,12 +163,12 @@ func (pgn *PGN) MovesToUCI() []string {
 	return moves
 }
 
-func (pgn *PGN) RemoveAnnotations() {
+func (pgn *PGN) RemoveAnnotations() string {
 	// Removes: move number continuation after variation `3...`, variation `(*)`, comments `{*}`, special characters `[+#?!]`
 	re := regexp.MustCompile(`\d+\.\.\.|\([^()]*\)|\{[^{}]*\}|[!?+#*]`)
 	whiteSpace := regexp.MustCompile(`\s+`)
 	text := re.ReplaceAllLiteralString(pgn.Moves, "")
 	text = whiteSpace.ReplaceAllLiteralString(text, " ")
-	pgn.Moves = text
+	return text
 
 }

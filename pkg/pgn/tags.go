@@ -22,14 +22,6 @@ func (pgn *PGN) AddTag(tag Tag, value string) *PGN {
 	switch tag {
 	case TAG_EVENT:
 		pgn.Event = value
-	case TAG_SITE:
-		pgn.Site = value
-	case TAG_DATE:
-		pgn.Date = value
-	case TAG_WHITE:
-		pgn.White = value
-	case TAG_BLACK:
-		pgn.Black = value
 	case TAG_RESULT:
 		pgn.Result = value
 	}
