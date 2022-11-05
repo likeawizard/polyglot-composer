@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"sort"
@@ -11,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/likeawizard/polyglot-composer/pkg/board"
+	_ "github.com/likeawizard/polyglot-composer/pkg/logger"
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
 )
 
@@ -99,9 +101,10 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 	b := &board.Board{}
 	b.Init()
 
+	movesSAN := pgn.RemoveAnnotations()
 	//Remove move counters and score at the end
-	re := regexp.MustCompile(`\d+\.\s|\s1-0|\s0-1|\s1\/2-1\/2`)
-	movesSAN := re.ReplaceAllLiteralString(pgn.Moves, "")
+	re := regexp.MustCompile(`\d+\.\s|\s*1-0|\s*0-1|\s*1\/2-1\/2`)
+	movesSAN = re.ReplaceAllLiteralString(movesSAN, "")
 	SANs := strings.Fields(movesSAN)
 
 	for i, san := range SANs {
@@ -110,7 +113,7 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 		}
 		move, err := b.SANToMove(san)
 		if err != nil {
-			//TODO: log SAN with PGN on error
+			log.Printf("move: %s pgn: %+v\n", san, *pgn)
 			break
 		}
 

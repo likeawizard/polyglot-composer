@@ -43,21 +43,14 @@ const (
 type PGNs []PGN
 
 type PGN struct {
-	Event       string
-	Site        string
-	Date        string
-	White       string
-	Black       string
-	Result      string
-	UTCDate     string
-	UTCTime     string
-	WhiteElo    string
-	BlackElo    string
-	Variant     string
-	TimeControl string
-	ECO         string
-	Termination string
-	Moves       string
+	Event string
+	// White       string
+	// Black       string
+	Result string
+	// WhiteElo    string
+	// BlackElo    string
+	// ECO         string
+	Moves string
 }
 
 type PGNParser struct {
@@ -72,5 +65,8 @@ type PGNParser struct {
 	lastBytes  bytesize.ByteSize
 	scanner    *bufio.Scanner
 	pgn        *PGN
+	tempPGN    *PGN
+	tag        Tag
+	value      string
 	nextLine   string
 }

@@ -36,8 +36,8 @@ func main() {
 
 		pgnChan := make(chan *pgn.PGN, 20)
 		go func() {
-			for game := pp.Next(); game != nil; game = pp.Next() {
-				pgnChan <- game
+			for pp.Scan() {
+				pgnChan <- pp.PGN()
 			}
 			pp.Close()
 			pp.Progress(true)
@@ -56,6 +56,5 @@ func main() {
 		wg.Wait()
 	}
 
-	// fmt.Printf("games parsed: , book keys %d\n", len(pb.b))
 	pb.SaveBook(out_path)
 }
