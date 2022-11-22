@@ -15,6 +15,7 @@ func main() {
 	var pgn_path, out_path string
 	flag.StringVar(&pgn_path, "pgn", "", "PGN path")
 	flag.StringVar(&out_path, "o", "poly_out.bin", "Polyglot book output name. Default: poly_out.bin")
+	flag.IntVar(&polyglot.MoveLimit, "d", 40, "Move depth limit. Default: 40")
 	flag.Parse()
 
 	if pgn_path == "" {

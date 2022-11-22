@@ -12,7 +12,6 @@ import (
 	"github.com/dsnet/compress/bzip2"
 
 	"github.com/inhies/go-bytesize"
-	"github.com/likeawizard/polyglot-composer/pkg/board"
 )
 
 func NewPGNParser(path string) (*PGNParser, error) {
@@ -130,37 +129,6 @@ func (pp *PGNParser) Progress(done bool) {
 
 func (pp *PGNParser) Close() error {
 	return pp.file.Close()
-}
-
-// TODO: move limit
-func (pgn *PGN) MovesToUCI() []string {
-	const moveLimit = 40
-
-	//Remove move counters and the game result at the back
-	re := regexp.MustCompile(`\d+\.\s|\s1-0|\s0-1|\s1\/2-1\/2`)
-	pgn.Moves = re.ReplaceAllLiteralString(pgn.Moves, "")
-	SANmoves := strings.Fields(pgn.Moves)
-	count := len(SANmoves)
-	if count > moveLimit {
-		count = moveLimit
-	}
-	moves := make([]string, 0)
-	bb := &board.Board{}
-	bb.InitDefault()
-
-	for i, san := range SANmoves {
-		if i > moveLimit-1 {
-			break
-		}
-		move, err := bb.SANToMove(san)
-		if err != nil {
-			break
-		}
-		moves = append(moves, move.String())
-		bb.MakeMove(move)
-	}
-
-	return moves
 }
 
 func (pgn *PGN) RemoveAnnotations() string {

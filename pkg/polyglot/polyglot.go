@@ -35,6 +35,8 @@ const (
 	maxUInt16 uint64 = 65535
 )
 
+var MoveLimit int
+
 type PolyglotBook struct {
 	lock sync.Mutex
 	book map[uint64][]polyEntry
@@ -97,7 +99,6 @@ func MoveToPolyMove(move board.Move) string {
 }
 
 func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
-	const moveLimit = 40
 	b := &board.Board{}
 	b.Init()
 
@@ -108,7 +109,7 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 	SANs := strings.Fields(movesSAN)
 
 	for i, san := range SANs {
-		if i > moveLimit-1 {
+		if i > MoveLimit-1 {
 			break
 		}
 		move, err := b.SANToMove(san)
