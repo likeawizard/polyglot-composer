@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dsnet/compress/bzip2"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/inhies/go-bytesize"
 )
@@ -31,7 +32,15 @@ func NewPGNParser(path string) (*PGNParser, error) {
 		file:       file,
 		totalBytes: bytesize.New(size)}
 
-	if strings.HasSuffix(path, "bz2") {
+	if strings.HasSuffix(path, "zst") {
+		pp.isArchived = true
+		zstReader, err := zstd.NewReader(file)
+		if err != nil {
+			return nil, fmt.Errorf("error opening zst: %s", err)
+		}
+		pp.zstReader = zstReader
+		pp.scanner = bufio.NewScanner(bufio.NewReader(zstReader))
+	} else if strings.HasSuffix(path, "bz2") {
 		pp.isArchived = true
 		bzReader, err := bzip2.NewReader(file, nil)
 		if err != nil {

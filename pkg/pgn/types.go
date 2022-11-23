@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dsnet/compress/bzip2"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/inhies/go-bytesize"
 )
@@ -57,6 +58,7 @@ type PGNParser struct {
 	clock      time.Time
 	file       *os.File
 	bzipReader *bzip2.Reader
+	zstReader  *zstd.Decoder
 	isArchived bool
 	skipping   bool
 	gameCount  int
