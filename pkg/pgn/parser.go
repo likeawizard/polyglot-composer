@@ -92,7 +92,9 @@ func (pp *PGNParser) Scan() bool {
 
 	if pp.pgn == nil && pp.tempPGN.Event != "" {
 		pp.pgn = pp.tempPGN
+		pp.tempPGN = nil
 		pp.gameCount++
+		return true
 	}
 
 	return false
