@@ -3,6 +3,7 @@ package board
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -274,14 +275,6 @@ func (b *Board) Disambiguate(move string) string {
 }
 
 func (b *Board) SANToMove(san string) (Move, error) {
-	// Remove check or checkmate symbol
-	if strings.HasSuffix(san, "+") || strings.HasSuffix(san, "#") {
-		san = san[:len(san)-1]
-	}
-	var from, to, disambiguation, promo string
-	if strings.Contains(san, "=") {
-		san, promo, _ = strings.Cut(san, "=")
-	}
 	switch {
 	// Castling moves
 	case san == "O-O-O":
@@ -296,40 +289,23 @@ func (b *Board) SANToMove(san string) (Move, error) {
 		} else {
 			return BCastleKing, nil
 		}
-	// Pawn push
-	case len(san) == 2:
-		from, to = san[0:1], san[:2]
-	// Captures
-	case strings.Contains(san, "x"):
-		from, to, _ = strings.Cut(san, "x")
-		// cut any nonsense that could potentially be there
-		to = to[:2]
-		if len(from) == 2 {
-			disambiguation = from[1:]
-			from = from[:1]
-		}
 	default:
-		if len(san) == 3 { // Default move ie Qe3
-			from = san[:1]
-			to = san[1:3]
-		} else if len(san) == 4 { // Move with single disambiguation rank/file ie Rhe8 or R8e3
-			from = san[:1]
-			disambiguation = san[1:2]
-			to = san[2:4]
-		} else if len(san) == 5 { // Double disambiguation Qe8h5
-			from = san[:1]
-			disambiguation = san[1:3]
-			to = san[3:5]
-		}
+		sanRe := regexp.MustCompile(`^(?P<piece>[NBRQK])?(?P<disamb>[a-h]?[1-8]?)?(?P<capture>x?)(?P<target>[a-h][1-8])(?:=(?P<promo>[NBRQ]))?$`)
+		m := sanRe.FindStringSubmatch(san)
+		piece := m[sanRe.SubexpIndex("piece")]
+		disamb := m[sanRe.SubexpIndex("disamb")]
+		target := m[sanRe.SubexpIndex("target")]
+		promo := m[sanRe.SubexpIndex("promo")]
+		return b.getMoveWithFromTo(piece, target, disamb, promo)
 	}
-	return b.getMoveWithFromTo(from, to, disambiguation, promo)
+
 }
 
-func (b *Board) getMoveWithFromTo(from, to, dis, promo string) (Move, error) {
+func (b *Board) getMoveWithFromTo(pieceStr, to, dis, promo string) (Move, error) {
 	moves := b.MoveGen()
 	piece := PAWNS
-	if from == strings.ToUpper(from) {
-		switch from {
+	if pieceStr != "" {
+		switch pieceStr {
 		case "B":
 			piece = BISHOPS
 		case "N":
@@ -341,8 +317,6 @@ func (b *Board) getMoveWithFromTo(from, to, dis, promo string) (Move, error) {
 		case "K":
 			piece = KINGS
 		}
-	} else {
-		dis = from
 	}
 	if b.Side == WHITE {
 		piece += 1
@@ -384,10 +358,9 @@ func (b *Board) getMoveWithFromTo(from, to, dis, promo string) (Move, error) {
 					}
 				}
 			}
-
 		} else if move.Piece() == piece && move.To().String() == to {
 			return move, nil
 		}
 	}
-	return 0, fmt.Errorf("unable to convert SAN to move with: from '%s', to '%s', dis '%s', promo '%s'", from, to, dis, promo)
+	return 0, fmt.Errorf("unable to convert SAN to move with: from '%s', to '%s', dis '%s', promo '%s'", pieceStr, to, dis, promo)
 }

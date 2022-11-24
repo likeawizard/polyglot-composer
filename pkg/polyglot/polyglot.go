@@ -119,9 +119,9 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 		}
 
 		switch {
-		case b.Side == board.WHITE && pgn.Result == "1-0" || b.Side == board.BLACK && pgn.Result == "0-1":
+		case (b.Side == board.WHITE && pgn.Result == "1-0") || (b.Side == board.BLACK && pgn.Result == "0-1"):
 			pb.AddMove(PolyZobrist(b), MoveToPolyMove(move), 2)
-		case pgn.Result != "0-1" && pgn.Result != "1-0":
+		case pgn.Result == "1/2-1/2":
 			pb.AddMove(PolyZobrist(b), MoveToPolyMove(move), 1)
 		}
 		b.MakeMove(move)
