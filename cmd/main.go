@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
 	"sync"
 
@@ -12,6 +15,9 @@ import (
 
 func main() {
 	// defer profile.Start(profile.CPUProfile).Stop()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	var interrupted bool
+
 	var pgn_path, out_path string
 	flag.StringVar(&pgn_path, "pgn", "", "PGN path")
 	flag.StringVar(&out_path, "o", "poly_out.bin", "Polyglot book output name. Default: poly_out.bin")
@@ -26,6 +32,9 @@ func main() {
 	paths := strings.Split(pgn_path, ",")
 
 	for _, path := range paths {
+		if interrupted {
+			break
+		}
 		pp, err := pgn.NewPGNParser(path)
 
 		if err != nil {
@@ -38,7 +47,14 @@ func main() {
 		pgnChan := make(chan *pgn.PGN, 20)
 		go func() {
 			for pp.Scan() {
-				pgnChan <- pp.PGN()
+				select {
+				case <-ctx.Done():
+					cancel()
+					interrupted = true
+					break
+				default:
+					pgnChan <- pp.PGN()
+				}
 			}
 			pp.Close()
 			pp.Progress(true)
