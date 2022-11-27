@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/dsnet/compress/bzip2"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/inhies/go-bytesize"
 )
@@ -31,19 +32,45 @@ func NewPGNParser(path string) (*PGNParser, error) {
 		file:       file,
 		totalBytes: bytesize.New(size)}
 
-	if strings.HasSuffix(path, "bz2") {
-		pp.isArchived = true
-		bzReader, err := bzip2.NewReader(file, nil)
-		if err != nil {
-			return nil, fmt.Errorf("error opening bzip2: %s", err)
-		}
-		pp.bzipReader = bzReader
-		pp.scanner = bufio.NewScanner(bufio.NewReader(bzReader))
-	} else {
-		pp.scanner = bufio.NewScanner(bufio.NewReader(file))
+	err = pp.setReader()
+	if err != nil {
+		return nil, err
 	}
 
 	return pp, nil
+}
+
+func (pp *PGNParser) setReader() error {
+	stat, err := pp.file.Stat()
+	if err != nil {
+		return err
+	}
+
+	switch {
+	case strings.HasSuffix(stat.Name(), "zst"):
+		pp.isArchived = true
+		zstReader, err := zstd.NewReader(pp.file)
+		if err != nil {
+			return fmt.Errorf("error opening zst: %s", err)
+		}
+		pp.source = zstReader
+		pp.scanner = bufio.NewScanner(bufio.NewReader(zstReader))
+
+	case strings.HasSuffix(stat.Name(), "bz2"):
+		pp.isArchived = true
+		bzReader, err := bzip2.NewReader(pp.file, nil)
+		if err != nil {
+			return fmt.Errorf("error opening bzip2: %s", err)
+		}
+		pp.source = bzReader
+		pp.scanner = bufio.NewScanner(bufio.NewReader(bzReader))
+
+	default:
+		pp.source = pp.file
+		pp.scanner = bufio.NewScanner(bufio.NewReader(pp.file))
+	}
+
+	return nil
 }
 
 // Scan the PGN file for the next game meeting the criteria defined by filters. The game can be accessed by calling the PGN method
@@ -111,10 +138,7 @@ func (pp *PGNParser) Next() *PGN {
 }
 
 func (pp *PGNParser) Progress(done bool) {
-	ratio := 1.0
-	if pp.bzipReader != nil && pp.bzipReader.InputOffset > 0 && pp.bzipReader.OutputOffset > 0 {
-		ratio = float64(pp.bzipReader.OutputOffset) / float64(pp.bzipReader.InputOffset)
-	}
+	ratio := pp.ratio()
 	progress := math.Min(float64(pp.readBytes)/float64(pp.totalBytes)/ratio, 1)
 	if done {
 		progress = 1
@@ -127,6 +151,22 @@ func (pp *PGNParser) Progress(done bool) {
 	}
 
 	fmt.Printf("%s\r", output)
+}
+
+func (pp *PGNParser) ratio() float64 {
+	switch reader := pp.source.(type) {
+	case *zstd.Decoder:
+		//to do
+		return 8.0
+	case *bzip2.Reader:
+		if reader.InputOffset > 0 {
+			return float64(reader.OutputOffset) / float64(reader.InputOffset)
+		} else {
+			return 1.0
+		}
+	default:
+		return 1.0
+	}
 }
 
 func (pp *PGNParser) Close() error {
