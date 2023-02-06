@@ -3,6 +3,7 @@ package pgn
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"regexp"
@@ -14,6 +15,43 @@ import (
 
 	"github.com/inhies/go-bytesize"
 )
+
+func PathParser(pgn_path string) ([]string, error) {
+	var files []string
+	fileTypes := []string{"pgn", "zst", "bz2"}
+	paths := strings.Split(pgn_path, ",")
+
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("error opening PGN: %s", err)
+		}
+		fileInfo, err := file.Stat()
+		if err != nil {
+			return nil, fmt.Errorf("error getting file stats: %s", err)
+		}
+
+		if fileInfo.IsDir() {
+			subfiles, err := ioutil.ReadDir(path)
+			if err != nil {
+				return nil, fmt.Errorf("error reading directory: %s", err)
+			}
+
+			for _, subfile := range subfiles {
+				for _, fileType := range fileTypes {
+					if strings.HasSuffix(subfile.Name(), fileType) {
+						files = append(files, path+"/"+subfile.Name())
+						break
+					}
+				}
+
+			}
+		} else {
+			files = append(files, path)
+		}
+	}
+	return files, nil
+}
 
 func NewPGNParser(path string) (*PGNParser, error) {
 	file, err := os.Open(path)
