@@ -28,7 +28,7 @@ func main() {
 		return
 	}
 	pb := polyglot.NewPolyglotBook()
-	paths, err := pgn.PathParser(pgn_path)
+	paths, err := pgn.ParsePath(pgn_path)
 	if err != nil {
 		fmt.Printf("could not parse pgn path: %s", err)
 	}

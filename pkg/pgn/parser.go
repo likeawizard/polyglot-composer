@@ -3,9 +3,9 @@ package pgn
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -16,9 +16,18 @@ import (
 	"github.com/inhies/go-bytesize"
 )
 
-func PathParser(pgn_path string) ([]string, error) {
-	var files []string
+func isSupportedType(fileName string) bool {
 	fileTypes := []string{"pgn", "zst", "bz2"}
+	for _, fileType := range fileTypes {
+		if strings.HasSuffix(fileName, fileType) {
+			return true
+		}
+	}
+	return false
+}
+
+func ParsePath(pgn_path string) ([]string, error) {
+	var files []string
 	paths := strings.Split(pgn_path, ",")
 
 	for _, path := range paths {
@@ -26,28 +35,27 @@ func PathParser(pgn_path string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error opening PGN: %s", err)
 		}
+		defer file.Close()
 		fileInfo, err := file.Stat()
 		if err != nil {
 			return nil, fmt.Errorf("error getting file stats: %s", err)
 		}
 
 		if fileInfo.IsDir() {
-			subfiles, err := ioutil.ReadDir(path)
+			subfiles, err := os.ReadDir(path)
 			if err != nil {
 				return nil, fmt.Errorf("error reading directory: %s", err)
 			}
 
 			for _, subfile := range subfiles {
-				for _, fileType := range fileTypes {
-					if strings.HasSuffix(subfile.Name(), fileType) {
-						files = append(files, path+"/"+subfile.Name())
-						break
-					}
+				if isSupportedType(subfile.Name()) {
+					files = append(files, filepath.Join(path, subfile.Name()))
 				}
-
 			}
 		} else {
-			files = append(files, path)
+			if isSupportedType(path) {
+				files = append(files, path)
+			}
 		}
 	}
 	return files, nil
