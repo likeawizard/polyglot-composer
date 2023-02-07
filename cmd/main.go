@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
@@ -29,7 +28,10 @@ func main() {
 		return
 	}
 	pb := polyglot.NewPolyglotBook()
-	paths := strings.Split(pgn_path, ",")
+	paths, err := pgn.ParsePath(pgn_path)
+	if err != nil {
+		fmt.Printf("could not parse pgn path: %s", err)
+	}
 
 	for _, path := range paths {
 		if interrupted {

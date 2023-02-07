@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -14,6 +15,51 @@ import (
 
 	"github.com/inhies/go-bytesize"
 )
+
+func isSupportedType(fileName string) bool {
+	fileTypes := []string{"pgn", "zst", "bz2"}
+	for _, fileType := range fileTypes {
+		if strings.HasSuffix(fileName, fileType) {
+			return true
+		}
+	}
+	return false
+}
+
+func ParsePath(pgn_path string) ([]string, error) {
+	var files []string
+	paths := strings.Split(pgn_path, ",")
+
+	for _, path := range paths {
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("error opening PGN: %s", err)
+		}
+		defer file.Close()
+		fileInfo, err := file.Stat()
+		if err != nil {
+			return nil, fmt.Errorf("error getting file stats: %s", err)
+		}
+
+		if fileInfo.IsDir() {
+			subfiles, err := os.ReadDir(path)
+			if err != nil {
+				return nil, fmt.Errorf("error reading directory: %s", err)
+			}
+
+			for _, subfile := range subfiles {
+				if isSupportedType(subfile.Name()) {
+					files = append(files, filepath.Join(path, subfile.Name()))
+				}
+			}
+		} else {
+			if isSupportedType(path) {
+				files = append(files, path)
+			}
+		}
+	}
+	return files, nil
+}
 
 func NewPGNParser(path string) (*PGNParser, error) {
 	file, err := os.Open(path)
