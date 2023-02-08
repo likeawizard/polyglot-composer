@@ -19,8 +19,8 @@ func main() {
 
 	var pgnPath, outPath string
 	flag.StringVar(&pgnPath, "pgn", "", "PGN path")
-	flag.StringVar(&outPath, "o", "poly_out.bin", "Polyglot book output name. Default: poly_out.bin")
-	flag.IntVar(&polyglot.MoveLimit, "d", 40, "Move depth limit. Default: 40")
+	flag.StringVar(&outPath, "o", "poly_out.bin", "Polyglot book output name.")
+	flag.IntVar(&polyglot.MoveLimit, "d", 40, "Move depth limit.")
 	flag.Parse()
 
 	if pgnPath == "" {
@@ -28,12 +28,12 @@ func main() {
 		return
 	}
 	pb := polyglot.NewPolyglotBook()
-	paths, err := pgn.ParsePath(pgnPath)
+	sources, err := pgn.ParsePath(pgnPath)
 	if err != nil {
 		fmt.Printf("could not parse pgn path: %s", err)
 	}
 
-	for _, path := range paths {
+	for _, path := range sources {
 		if interrupted {
 			break
 		}
@@ -42,8 +42,6 @@ func main() {
 		if err != nil {
 			fmt.Printf("could not load pgn file: %s with error: %s\n", path, err)
 			continue
-		} else {
-			fmt.Printf("Parsing '%s' ...\n", path)
 		}
 
 		pgnChan := make(chan *pgn.PGN, 20)
