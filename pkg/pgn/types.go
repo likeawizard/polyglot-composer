@@ -1,12 +1,7 @@
 package pgn
 
 import (
-	"bufio"
-	"io"
-	"os"
 	"time"
-
-	"github.com/inhies/go-bytesize"
 )
 
 const (
@@ -53,19 +48,13 @@ type PGN struct {
 }
 
 type PGNParser struct {
-	clock      time.Time
-	file       *os.File
-	source     io.Reader
-	isArchived bool
-	skipping   bool
-	gameCount  int
-	totalBytes bytesize.ByteSize
-	readBytes  bytesize.ByteSize
-	lastBytes  bytesize.ByteSize
-	scanner    *bufio.Scanner
-	pgn        *PGN
-	tempPGN    *PGN
-	tag        Tag
-	value      string
-	nextLine   string
+	clock     time.Time
+	source    PGNSource
+	skipping  bool
+	gameCount int
+	pgn       *PGN
+	tempPGN   *PGN
+	tag       Tag
+	value     string
+	nextLine  string
 }

@@ -17,23 +17,23 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	var interrupted bool
 
-	var pgn_path, out_path string
-	flag.StringVar(&pgn_path, "pgn", "", "PGN path")
-	flag.StringVar(&out_path, "o", "poly_out.bin", "Polyglot book output name. Default: poly_out.bin")
-	flag.IntVar(&polyglot.MoveLimit, "d", 40, "Move depth limit. Default: 40")
+	var pgnPath, outPath string
+	flag.StringVar(&pgnPath, "pgn", "", "PGN path")
+	flag.StringVar(&outPath, "o", "poly_out.bin", "Polyglot book output name.")
+	flag.IntVar(&polyglot.MoveLimit, "d", 40, "Move depth limit.")
 	flag.Parse()
 
-	if pgn_path == "" {
+	if pgnPath == "" {
 		fmt.Println("no pgn provided")
 		return
 	}
 	pb := polyglot.NewPolyglotBook()
-	paths, err := pgn.ParsePath(pgn_path)
+	sources, err := pgn.ParsePath(pgnPath)
 	if err != nil {
 		fmt.Printf("could not parse pgn path: %s", err)
 	}
 
-	for _, path := range paths {
+	for _, path := range sources {
 		if interrupted {
 			break
 		}
@@ -42,8 +42,6 @@ func main() {
 		if err != nil {
 			fmt.Printf("could not load pgn file: %s with error: %s\n", path, err)
 			continue
-		} else {
-			fmt.Printf("Parsing '%s' ...\n", path)
 		}
 
 		pgnChan := make(chan *pgn.PGN, 20)
@@ -75,5 +73,5 @@ func main() {
 		wg.Wait()
 	}
 
-	pb.SaveBook(out_path)
+	pb.SaveBook(outPath)
 }
