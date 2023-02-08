@@ -26,9 +26,9 @@ func isSupportedType(fileName string) bool {
 	return false
 }
 
-func ParsePath(pgn_path string) ([]string, error) {
+func ParsePath(pgnPath string) ([]string, error) {
 	var files []string
-	paths := strings.Split(pgn_path, ",")
+	paths := strings.Split(pgnPath, ",")
 
 	for _, path := range paths {
 		file, err := os.Open(path)
