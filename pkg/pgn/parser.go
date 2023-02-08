@@ -2,6 +2,7 @@ package pgn
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -83,7 +84,7 @@ func (pp *PGNParser) Next() *PGN {
 }
 
 func (pp *PGNParser) Progress(done bool) {
-	output := fmt.Sprintf("games: %d size: %v done: %.2f%%", pp.gameCount, pp.source.Size(), 100*float64(pp.source.BytesRead())/float64(pp.source.Size()))
+	output := fmt.Sprintf("games: %d size: %v done: %.2f%%", pp.gameCount, pp.source.Size(), 100*math.Min(1, float64(pp.source.BytesRead())/float64(pp.source.Size())))
 	fmt.Printf("%s\r", output)
 }
 
