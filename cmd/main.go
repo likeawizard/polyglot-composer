@@ -14,8 +14,7 @@ import (
 
 func main() {
 	// defer profile.Start(profile.CPUProfile).Stop()
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	var interrupted bool
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
 
 	var pgnPath, outPath string
 	flag.StringVar(&pgnPath, "pgn", "", "PGN path")
@@ -33,9 +32,12 @@ func main() {
 		fmt.Printf("could not parse pgn path: %s", err)
 	}
 
+SourceLoop:
 	for _, path := range sources {
-		if interrupted {
-			break
+		select {
+		case <-ctx.Done():
+			break SourceLoop
+		default:
 		}
 		pp, err := pgn.NewPGNParser(path)
 
@@ -46,15 +48,8 @@ func main() {
 
 		pgnChan := make(chan *pgn.PGN, 20)
 		go func() {
-			for pp.Scan() {
-				select {
-				case <-ctx.Done():
-					cancel()
-					interrupted = true
-					break
-				default:
-					pgnChan <- pp.PGN()
-				}
+			for pp.Scan(ctx) {
+				pgnChan <- pp.PGN()
 			}
 			pp.Close()
 			pp.Progress(true)
@@ -74,4 +69,5 @@ func main() {
 	}
 
 	pb.SaveBook(outPath)
+	fmt.Printf("Book saved: %v\n", outPath)
 }

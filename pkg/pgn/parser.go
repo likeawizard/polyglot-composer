@@ -1,6 +1,7 @@
 package pgn
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"regexp"
@@ -23,7 +24,7 @@ func NewPGNParser(source PGNSource) (*PGNParser, error) {
 }
 
 // Scan the PGN file for the next game meeting the criteria defined by filters. The game can be accessed by calling the PGN method
-func (pp *PGNParser) Scan() bool {
+func (pp *PGNParser) Scan(ctx context.Context) bool {
 	pp.pgn = nil
 	pp.tempPGN = &PGN{}
 	if pp.nextLine != "" {
@@ -31,36 +32,42 @@ func (pp *PGNParser) Scan() bool {
 		pp.nextLine = ""
 	}
 	for pp.source.Scan() {
-		if time.Since(pp.clock) > time.Second {
-			pp.Progress(false)
-			pp.clock = time.Now()
-		}
-		line := pp.source.Text()
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		if isTag(line) {
-			pp.tag, pp.value = parseTag(line)
-			if !pp.skipping {
-				pp.skipping = !PreFilter(pp.tag, pp.value)
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+			if time.Since(pp.clock) > time.Second {
+				pp.Progress(false)
+				pp.clock = time.Now()
 			}
-			if pp.tag == TAG_EVENT && pp.tempPGN.Event != "" {
-				if pp.skipping {
-					pp.tempPGN = &PGN{Event: pp.value}
-					pp.skipping = false
-				} else {
-					pp.pgn = pp.tempPGN
-					pp.nextLine = line
-					pp.gameCount++
-					return true
+			line := pp.source.Text()
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			if isTag(line) {
+				pp.tag, pp.value = parseTag(line)
+				if !pp.skipping {
+					pp.skipping = !PreFilter(pp.tag, pp.value)
 				}
+				if pp.tag == TAG_EVENT && pp.tempPGN.Event != "" {
+					if pp.skipping {
+						pp.tempPGN = &PGN{Event: pp.value}
+						pp.skipping = false
+					} else {
+						pp.pgn = pp.tempPGN
+						pp.nextLine = line
+						pp.gameCount++
+						return true
+					}
+				}
+
+				pp.tempPGN.AddTag(pp.tag, pp.value)
+
+			} else {
+				pp.tempPGN.Moves += line
 			}
-
-			pp.tempPGN.AddTag(pp.tag, pp.value)
-
-		} else {
-			pp.tempPGN.Moves += line
 		}
+
 	}
 
 	if pp.pgn == nil && pp.tempPGN.Event != "" {
@@ -76,11 +83,6 @@ func (pp *PGNParser) Scan() bool {
 func (pp *PGNParser) PGN() *PGN {
 	return pp.pgn
 
-}
-
-func (pp *PGNParser) Next() *PGN {
-	pp.Scan()
-	return pp.pgn
 }
 
 func (pp *PGNParser) Progress(done bool) {
