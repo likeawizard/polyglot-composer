@@ -9,10 +9,11 @@ import (
 	"time"
 )
 
-func NewPGNParser(source PGNSource) (*PGNParser, error) {
+func NewPGNParser(source PGNSource, filtered bool) (*PGNParser, error) {
 	pp := &PGNParser{
-		source: source,
-		clock:  time.Now(),
+		source:   source,
+		clock:    time.Now(),
+		filtered: filtered,
 	}
 
 	err := pp.source.Open()
@@ -46,7 +47,7 @@ func (pp *PGNParser) Scan(ctx context.Context) bool {
 			}
 			if isTag(line) {
 				pp.tag, pp.value = parseTag(line)
-				if !pp.skipping {
+				if pp.filtered && !pp.skipping {
 					pp.skipping = !PreFilter(pp.tag, pp.value)
 				}
 				if pp.tag == TAG_EVENT && pp.tempPGN.Event != "" {
@@ -101,4 +102,9 @@ func (pgn *PGN) RemoveAnnotations() string {
 	text := re.ReplaceAllLiteralString(pgn.Moves, "")
 	text = whiteSpace.ReplaceAllLiteralString(text, " ")
 	return text
+}
+
+func (pgn *PGN) GetAnnotations() []string {
+	re := regexp.MustCompile(`\{[^{}]*\}`)
+	return re.FindAllString(pgn.Moves, -1)
 }

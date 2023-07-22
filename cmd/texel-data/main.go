@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -9,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
-	"github.com/likeawizard/polyglot-composer/pkg/polyglot"
 )
 
 func main() {
@@ -18,15 +18,13 @@ func main() {
 
 	var pgnPath, outPath string
 	flag.StringVar(&pgnPath, "pgn", "", "PGN path")
-	flag.StringVar(&outPath, "o", "poly_out.bin", "Polyglot book output name.")
-	flag.IntVar(&polyglot.MoveLimit, "d", 40, "Move depth limit.")
+	flag.StringVar(&outPath, "o", "texel_data.txt", "Texel data output")
 	flag.Parse()
 
 	if pgnPath == "" {
 		fmt.Println("no pgn provided")
 		return
 	}
-	pb := polyglot.NewPolyglotBook()
 	sources, err := pgn.ParsePath(pgnPath)
 	if err != nil {
 		fmt.Printf("could not parse pgn path: %s", err)
@@ -39,13 +37,14 @@ SourceLoop:
 			break SourceLoop
 		default:
 		}
-		pp, err := pgn.NewPGNParser(path)
+		pp, err := pgn.NewPGNParser(path, false)
 
 		if err != nil {
 			fmt.Printf("could not load pgn file: %s with error: %s\n", path, err)
 			continue
 		}
 
+		fenChan := make(chan string)
 		pgnChan := make(chan *pgn.PGN, 20)
 		go func() {
 			for pp.Scan(ctx) {
@@ -56,18 +55,39 @@ SourceLoop:
 			close(pgnChan)
 		}()
 
+		var writeWG sync.WaitGroup
+		writeWG.Add(1)
+		go func() {
+			file, err := os.Create(outPath)
+			if err != nil {
+				fmt.Println("failed opening file for writing: ", path)
+			}
+			defer file.Close()
+
+			writer := bufio.NewWriter(file)
+			for fen := range fenChan {
+				writer.WriteString(fen)
+			}
+			writer.Flush()
+			writeWG.Done()
+		}()
+
 		var wg sync.WaitGroup
 		for game := range pgnChan {
 			wg.Add(1)
 			go func(game *pgn.PGN) {
+				fens := game.GetFENs()
+				for i := range fens {
+					fenChan <- fens[i]
+				}
 				defer wg.Done()
-				pb.AddFromPGN(game)
 			}(game)
 		}
+
 		fmt.Println()
 		wg.Wait()
+		close(fenChan)
+		writeWG.Wait()
 	}
-
-	pb.SaveBook(outPath)
 	fmt.Printf("Book saved: %v\n", outPath)
 }
