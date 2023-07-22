@@ -62,12 +62,18 @@ func decodeBookEntry(bytes []byte) (uint64, polyEntry) {
 }
 
 func encodeBookEntry(key uint64, entry polyEntry) []byte {
-	bytes := make([]byte, 0)
-	bytes = binary.BigEndian.AppendUint64(bytes, key)
-	bytes = binary.BigEndian.AppendUint16(bytes, UCIToPolyMove(entry.move))
-	bytes = binary.BigEndian.AppendUint16(bytes, uint16(entry.weight))
-	bytes = binary.BigEndian.AppendUint32(bytes, 0)
+	bk := make([]byte, 8)
+	bm := make([]byte, 2)
+	bw := make([]byte, 2)
+	pad := make([]byte, 4)
+	binary.BigEndian.PutUint64(bk, key)
+	binary.BigEndian.PutUint16(bm, UCIToPolyMove(entry.move))
+	binary.BigEndian.PutUint16(bw, uint16(entry.weight))
+	binary.BigEndian.PutUint32(pad, 0)
 
+	bytes := append(bk, bm...)
+	bytes = append(bytes, bw...)
+	bytes = append(bytes, pad...)
 	return bytes
 }
 
