@@ -260,10 +260,10 @@ func (pb *PolyglotBook) SaveBook(path string) {
 			if err != nil {
 				fmt.Println("Error writing:", err)
 			}
-			err = writer.Flush()
-			if err != nil {
-				fmt.Println("Error flushing:", err)
-			}
+		}
+		err = writer.Flush()
+		if err != nil {
+			fmt.Println("Error flushing:", err)
 		}
 	}
 }

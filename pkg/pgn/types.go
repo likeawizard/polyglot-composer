@@ -57,4 +57,5 @@ type PGNParser struct {
 	tag       Tag
 	value     string
 	nextLine  string
+	filtered  bool
 }
