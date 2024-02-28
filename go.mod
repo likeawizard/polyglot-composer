@@ -1,6 +1,6 @@
 module github.com/likeawizard/polyglot-composer
 
-go 1.19
+go 1.22
 
 require github.com/pkg/profile v1.7.0
 
@@ -10,4 +10,5 @@ require (
 	github.com/google/pprof v0.0.0-20211214055906-6f57359322fd // indirect
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf // indirect
 	github.com/klauspost/compress v1.15.12 // indirect
+	github.com/likeawizard/tofiks v1.3.0 // indirect
 )
