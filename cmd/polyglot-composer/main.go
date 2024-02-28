@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 
+	_ "github.com/likeawizard/polyglot-composer/pkg/logger"
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
 	"github.com/likeawizard/polyglot-composer/pkg/polyglot"
 )
@@ -40,7 +41,6 @@ SourceLoop:
 		default:
 		}
 		pp, err := pgn.NewPGNParser(path, true)
-
 		if err != nil {
 			fmt.Printf("could not load pgn file: %s with error: %s\n", path, err)
 			continue

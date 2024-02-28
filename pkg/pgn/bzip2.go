@@ -8,11 +8,11 @@ import (
 )
 
 type Bzip2PGN struct {
-	path   string
 	reader *bzip2.Reader
 	pgn    *bufio.Scanner
-	size   bytesize.ByteSize
 	close  closeFn
+	path   string
+	size   bytesize.ByteSize
 }
 
 func NewBzip2PGN(path string) *Bzip2PGN {
@@ -30,7 +30,7 @@ func (s *Bzip2PGN) Open() error {
 
 	s.reader, err = bzip2.NewReader(reader, nil)
 	if err != nil {
-		close()
+		_ = close()
 		return err
 	}
 

@@ -9,7 +9,7 @@ const (
 	TERM_TIME   = "Time forfeit"
 )
 
-// Upper bounds for adjusted time per game (seconds), bullet assumes 40move game, blitz, rapid 60 move game
+// Upper bounds for adjusted time per game (seconds), bullet assumes 40move game, blitz, rapid 60 move game.
 const (
 	TC_BULLET    = 0
 	TC_BLITZ     = 3 * 60
@@ -47,15 +47,15 @@ type PGN struct {
 	Moves string
 }
 
-type PGNParser struct {
+type Parser struct {
 	clock     time.Time
-	source    PGNSource
-	skipping  bool
-	gameCount int
+	source    Source
 	pgn       *PGN
 	tempPGN   *PGN
 	tag       Tag
 	value     string
 	nextLine  string
+	gameCount int
+	skipping  bool
 	filtered  bool
 }

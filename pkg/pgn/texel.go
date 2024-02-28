@@ -23,7 +23,7 @@ func (pgn *PGN) GetFENs() []string {
 	validMoveAnnotation := regexp.MustCompile(`{[+-]\d+\.\d+.*?}`)
 
 	movesSAN := pgn.RemoveAnnotations()
-	//Remove move counters and score at the end
+
 	re := regexp.MustCompile(`\d+\.\s|\s*1-0|\s*0-1|\s*1\/2-1\/2`)
 	movesSAN = re.ReplaceAllLiteralString(movesSAN, "")
 	SANs := strings.Fields(movesSAN)

@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-func NewPGNParser(source PGNSource, filtered bool) (*PGNParser, error) {
-	pp := &PGNParser{
+func NewPGNParser(source Source, filtered bool) (*Parser, error) {
+	pp := &Parser{
 		source:   source,
 		clock:    time.Now(),
 		filtered: filtered,
@@ -24,8 +24,8 @@ func NewPGNParser(source PGNSource, filtered bool) (*PGNParser, error) {
 	return pp, nil
 }
 
-// Scan the PGN file for the next game meeting the criteria defined by filters. The game can be accessed by calling the PGN method
-func (pp *PGNParser) Scan(ctx context.Context) bool {
+// Scan the PGN file for the next game meeting the criteria defined by filters. The game can be accessed by calling the PGN method.
+func (pp *Parser) Scan(ctx context.Context) bool {
 	pp.pgn = nil
 	pp.tempPGN = &PGN{}
 	if pp.nextLine != "" {
@@ -63,12 +63,10 @@ func (pp *PGNParser) Scan(ctx context.Context) bool {
 				}
 
 				pp.tempPGN.AddTag(pp.tag, pp.value)
-
 			} else {
 				pp.tempPGN.Moves += line
 			}
 		}
-
 	}
 
 	if pp.pgn == nil && pp.tempPGN.Event != "" {
@@ -81,17 +79,16 @@ func (pp *PGNParser) Scan(ctx context.Context) bool {
 	return false
 }
 
-func (pp *PGNParser) PGN() *PGN {
+func (pp *Parser) PGN() *PGN {
 	return pp.pgn
-
 }
 
-func (pp *PGNParser) Progress(done bool) {
+func (pp *Parser) Progress(_ bool) {
 	output := fmt.Sprintf("games: %d size: %v done: %.2f%%", pp.gameCount, pp.source.Size(), 100*math.Min(1, float64(pp.source.BytesRead())/float64(pp.source.Size())))
 	fmt.Printf("%s\r", output)
 }
 
-func (pp *PGNParser) Close() error {
+func (pp *Parser) Close() error {
 	return pp.source.Close()
 }
 

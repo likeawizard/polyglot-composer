@@ -12,7 +12,7 @@ import (
 	"github.com/inhies/go-bytesize"
 )
 
-type PGNSource interface {
+type Source interface {
 	Open() error
 	Close() error
 	Scan() bool
@@ -24,10 +24,10 @@ type PGNSource interface {
 }
 
 // Reader that keeps track on the bytes read.
-// Useful for reading compressed files and estimateing their compression by wrapping input and output readers (i.e. input: file, output: decompressed data read)
+// Useful for reading compressed files and estimateing their compression by wrapping input and output readers (i.e. input: file, output: decompressed data read).
 type ByteCountingReader struct {
-	bytesRead bytesize.ByteSize
 	reader    io.Reader
+	bytesRead bytesize.ByteSize
 }
 
 func (bcr *ByteCountingReader) Read(p []byte) (n int, err error) {
@@ -46,22 +46,22 @@ func openSource(path string) (io.Reader, bytesize.ByteSize, closeFn, error) {
 		}
 
 		return r.Body, bytesize.ByteSize(r.ContentLength), r.Body.Close, nil
-	} else {
-		file, err := os.Open(path)
-		if err != nil {
-			return nil, 0, nil, err
-		}
-
-		stat, err := file.Stat()
-		if err != nil {
-			return nil, 0, nil, err
-		}
-
-		return file, bytesize.ByteSize(stat.Size()), file.Close, err
 	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	return file, bytesize.ByteSize(stat.Size()), file.Close, err
 }
 
-func sourceFromPath(path string) (PGNSource, error) {
+func sourceFromPath(path string) (Source, error) {
 	switch filepath.Ext(path) {
 	case ".zst":
 		return NewZstPGN(path), nil
@@ -72,11 +72,10 @@ func sourceFromPath(path string) (PGNSource, error) {
 	default:
 		return nil, fmt.Errorf("unsupported file format")
 	}
-
 }
 
-func ParsePath(pgnPath string) ([]PGNSource, error) {
-	files := make([]PGNSource, 0)
+func ParsePath(pgnPath string) ([]Source, error) {
+	files := make([]Source, 0)
 	paths := strings.Split(pgnPath, ",")
 
 	for _, path := range paths {
@@ -108,7 +107,6 @@ func ParsePath(pgnPath string) ([]PGNSource, error) {
 				}
 			}
 		}
-
 	}
 	return files, nil
 }
@@ -118,9 +116,9 @@ func isUrl(path string) bool {
 	return err == nil
 }
 
-func dataSourceFromDir(path string) ([]PGNSource, error) {
+func dataSourceFromDir(path string) ([]Source, error) {
 	subfiles, err := os.ReadDir(path)
-	sc := make([]PGNSource, 0)
+	sc := make([]Source, 0)
 	if err != nil {
 		return nil, err
 	}

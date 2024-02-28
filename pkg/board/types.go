@@ -13,15 +13,15 @@ package board
 9 bk
 10 br
 11 bq
-12 bk
+12 bk.
 */
 type Board struct {
-	Hash            uint64
 	Pieces          [2][6]BBoard
 	Occupancy       [3]BBoard
+	Hash            uint64
 	Side            int
-	CastlingRights  CastlingRights
 	EnPassantTarget Square
+	CastlingRights  CastlingRights
 	HalfMoveCounter uint8
 	FullMoveCounter uint8
 }
@@ -72,7 +72,7 @@ const (
 
 type BBoard uint64
 
-// Useful bitboard constants
+// Useful bitboard constants.
 const (
 	WHITE          = 0
 	BLACK          = 1

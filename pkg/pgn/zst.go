@@ -9,13 +9,13 @@ import (
 )
 
 type ZstPGN struct {
-	path         string
 	file         *os.File
 	pgn          *bufio.Scanner
 	inputReader  *ByteCountingReader
 	outputReader *ByteCountingReader
-	size         bytesize.ByteSize
 	close        closeFn
+	path         string
+	size         bytesize.ByteSize
 }
 
 func NewZstPGN(path string) *ZstPGN {

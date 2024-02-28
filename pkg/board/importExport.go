@@ -73,13 +73,13 @@ func (b *Board) ImportFEN(fen string) error {
 	for _, c := range []byte(castling) {
 		switch c {
 		case 'K':
-			b.CastlingRights = b.CastlingRights | WOO
+			b.CastlingRights |= WOO
 		case 'Q':
-			b.CastlingRights = b.CastlingRights | WOOO
+			b.CastlingRights |= WOOO
 		case 'k':
-			b.CastlingRights = b.CastlingRights | BOO
+			b.CastlingRights |= BOO
 		case 'q':
-			b.CastlingRights = b.CastlingRights | BOOO
+			b.CastlingRights |= BOOO
 		}
 	}
 
@@ -143,7 +143,7 @@ func (b *Board) parsePieces(position string) {
 	b.Occupancy[BOTH] = b.Occupancy[WHITE] | b.Occupancy[BLACK]
 }
 
-// Serialize the board into fen representation of piece placement
+// Serialize the board into fen representation of piece placement.
 func (b *Board) serializePosition() string {
 	byteBoard := make([]byte, 64)
 	for color := WHITE; color <= BLACK; color++ {
@@ -202,8 +202,8 @@ func (b *Board) serializePosition() string {
 	return fen
 }
 
-func (b *Board) WritePGNToFile(data string, path string) {
-	os.WriteFile(path, []byte(data), 0644)
+func (b *Board) WritePGNToFile(data string, path string) error {
+	return os.WriteFile(path, []byte(data), 0o644)
 }
 
 func (b *Board) GeneratePGN(moves []Move) string {
@@ -220,7 +220,7 @@ func (b *Board) GeneratePGN(moves []Move) string {
 	return pgn
 }
 
-// Convert UCI move to short algebraic
+// Convert UCI move to short algebraic.
 func (b *Board) UCIToAlgebraic(move string) (pretty string) {
 	from, to := MoveFromString(move).FromTo()
 	_, _, piece := b.PieceAtSquare(from)
@@ -250,7 +250,7 @@ func (b *Board) UCIToAlgebraic(move string) (pretty string) {
 	return
 }
 
-// Add rank or file disambiguations for short algebraic
+// Add rank or file disambiguations for short algebraic.
 func (b *Board) Disambiguate(move string) string {
 	moves := b.MoveGen()
 	dis := ""
@@ -298,7 +298,6 @@ func (b *Board) SANToMove(san string) (Move, error) {
 		promo := m[sanRe.SubexpIndex("promo")]
 		return b.getMoveWithFromTo(piece, target, disamb, promo)
 	}
-
 }
 
 func (b *Board) getMoveWithFromTo(pieceStr, to, dis, promo string) (Move, error) {
@@ -319,7 +318,7 @@ func (b *Board) getMoveWithFromTo(pieceStr, to, dis, promo string) (Move, error)
 		}
 	}
 	if b.Side == WHITE {
-		piece += 1
+		piece++
 	} else {
 		piece += 7
 	}

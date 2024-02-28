@@ -38,7 +38,6 @@ SourceLoop:
 		default:
 		}
 		pp, err := pgn.NewPGNParser(path, false)
-
 		if err != nil {
 			fmt.Printf("could not load pgn file: %s with error: %s\n", path, err)
 			continue
@@ -66,7 +65,7 @@ SourceLoop:
 
 			writer := bufio.NewWriter(file)
 			for fen := range fenChan {
-				writer.WriteString(fen)
+				_, _ = writer.WriteString(fen)
 			}
 			writer.Flush()
 			writeWG.Done()
