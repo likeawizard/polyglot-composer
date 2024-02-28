@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/likeawizard/polyglot-composer/pkg/board"
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
+	"github.com/likeawizard/tofiks/pkg/board"
 )
 
 const (
@@ -103,11 +103,10 @@ func MoveToPolyMove(move board.Move) string {
 	}
 }
 
-func (pb *Book) AddFromPGN(pgn *pgn.PGN) {
-	b := &board.Board{}
-	b.Init()
+func (pb *Book) AddFromPGN(game *pgn.PGN) {
+	b := board.NewBoard("startpos")
 
-	movesSAN := pgn.RemoveAnnotations()
+	movesSAN := game.RemoveAnnotations()
 
 	re := regexp.MustCompile(`\d+\.\s|\s*1-0|\s*0-1|\s*1\/2-1\/2`)
 	movesSAN = re.ReplaceAllLiteralString(movesSAN, "")
@@ -117,16 +116,16 @@ func (pb *Book) AddFromPGN(pgn *pgn.PGN) {
 		if i > MoveLimit-1 {
 			break
 		}
-		move, err := b.SANToMove(san)
+		move, err := pgn.SANToMove(b, san)
 		if err != nil {
-			log.Printf("move: %s pgn: %+v\n", san, *pgn)
+			log.Printf("move: %s pgn: %+v\n", san, *game)
 			break
 		}
 
 		switch {
-		case (b.Side == board.WHITE && pgn.Result == "1-0") || (b.Side == board.BLACK && pgn.Result == "0-1"):
+		case (b.Side == board.WHITE && game.Result == "1-0") || (b.Side == board.BLACK && game.Result == "0-1"):
 			pb.AddMove(PolyZobrist(b), MoveToPolyMove(move), 2)
-		case pgn.Result == "1/2-1/2":
+		case game.Result == "1/2-1/2":
 			pb.AddMove(PolyZobrist(b), MoveToPolyMove(move), 1)
 		}
 		b.MakeMove(move)
