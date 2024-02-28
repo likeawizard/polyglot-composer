@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// Filter conditions that can be determined on individual Tags
+// Filter conditions that can be determined on individual Tags.
 func PreFilter(tag Tag, value string) bool {
 	switch tag {
 	case TAG_RESULT:
@@ -26,7 +26,7 @@ func PreFilter(tag Tag, value string) bool {
 }
 
 // Filter conditions that dependant on a combination of tags. ie Elo difference
-// TODO: function stub
+// TODO: function stub.
 func (pgn *PGN) PostFilter() bool {
 	return true
 }

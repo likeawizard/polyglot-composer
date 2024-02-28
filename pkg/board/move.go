@@ -6,13 +6,13 @@ import (
 )
 
 var (
-	// Castling moves. Used for recognizing castling and moving king during castling
+	// Castling moves. Used for recognizing castling and moving king during castling.
 	WCastleKing  = MoveFromString("e1g1") | IS_CASTLING | 6<<12
 	WCastleQueen = MoveFromString("e1c1") | IS_CASTLING | 6<<12
 	BCastleKing  = MoveFromString("e8g8") | IS_CASTLING | 12<<12
 	BCastleQueen = MoveFromString("e8c8") | IS_CASTLING | 12<<12
 
-	// Complimentary castling moves. Used during castling to reposition rook
+	// Complimentary castling moves. Used during castling to reposition rook.
 	WCastleKingRook  = MoveFromString("h1f1") | 4<<12
 	WCastleQueenRook = MoveFromString("a1d1") | 4<<12
 	BCastleKingRook  = MoveFromString("h8f8") | 10<<12
@@ -20,7 +20,7 @@ var (
 )
 
 // 0..7 a8 to h8
-// 0..63 to a8 to h1 mapping
+// 0..63 to a8 to h1 mapping.
 type Square int
 
 func SquareFromString(s string) Square {
@@ -54,24 +54,6 @@ const (
 	IS_ENPASSANT = 0x400000
 	IS_CASTLING  = 0x800000
 )
-
-func NewMove(from, to, piece, promo int, capture, double, ep, castling bool) Move {
-	move := Move(from | to<<6 | piece<<12)
-	if capture {
-		move |= IS_CAPTURE
-	}
-	if double {
-		move |= IS_DOUBLE
-	}
-	if ep {
-		move |= IS_ENPASSANT
-	}
-	if castling {
-		move |= IS_CASTLING
-	}
-
-	return move
-}
 
 func MoveFromString(s string) Move {
 	from := SquareFromString(s[:2]) << 6
@@ -109,7 +91,6 @@ func (m Move) FromTo() (Square, Square) {
 
 func (m Move) Reverse() Move {
 	return m>>6&63 | m&63<<6
-
 }
 
 func (m Move) IsCastling() bool {
@@ -144,6 +125,5 @@ func (m Move) String() string {
 	case PROMO_ROOK:
 		promo = "r"
 	}
-	return fmt.Sprintf("%v%v%s", Square(m.From()), Square(m.To()), promo)
-
+	return fmt.Sprintf("%v%v%s", m.From(), m.To(), promo)
 }

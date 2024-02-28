@@ -22,27 +22,25 @@ func (bb BBoard) String() string {
 	return s
 }
 
-// Get the bit at position
+// Get the bit at position.
 func (bb *BBoard) Get(sq int) BBoard {
 	return *bb >> sq & 1
 }
 
-// Set a bit to one at position
+// Set a bit to one at position.
 func (bb *BBoard) Set(sq int) {
 	*bb |= SquareBitboards[sq]
 }
 
-// Set a bit to zero at position
+// Set a bit to zero at position.
 func (bb *BBoard) Clear(sq int) {
 	*bb &= ^SquareBitboards[sq]
 }
 
-// Return population count (number of 1's)
 func (bb BBoard) Count() int {
 	return bits.OnesCount64(uint64(bb))
 }
 
-// Get the position of the Least Signficant
 func (bb BBoard) LS1B() int {
 	return bits.TrailingZeros64(uint64(bb))
 }
@@ -53,7 +51,7 @@ func (bb *BBoard) PopLS1B() int {
 	return ls1b
 }
 
-// Get bishop attack mask with blocker occupancy
+// Get bishop attack mask with blocker occupancy.
 func GetBishopAttacks(sq int, occ BBoard) BBoard {
 	occ &= BishopAttackMasks[sq]
 	occ *= BishopMagics[sq]
@@ -61,7 +59,7 @@ func GetBishopAttacks(sq int, occ BBoard) BBoard {
 	return BishopAttacks[sq][occ]
 }
 
-// Get Rook attack mask with blocker occupancy
+// Get Rook attack mask with blocker occupancy.
 func GetRookAttacks(sq int, occ BBoard) BBoard {
 	occ &= RookAttackMasks[sq]
 	occ *= RookMagics[sq]
@@ -69,7 +67,7 @@ func GetRookAttacks(sq int, occ BBoard) BBoard {
 	return RookAttacks[sq][occ]
 }
 
-// Get Queen attacks as a Bishop and Rook superposition
+// Get Queen attacks as a Bishop and Rook superposition.
 func GetQueenAttacks(sq int, occ BBoard) BBoard {
 	return GetBishopAttacks(sq, occ) | GetRookAttacks(sq, occ)
 }
@@ -150,7 +148,7 @@ func (b *Board) GetChecksBB(side int) (BBoard, bool) {
 	return checks, numChecks > 1
 }
 
-// Determine if a square is attacked by the opposing side
+// Determine if a square is attacked by the opposing side.
 func (b *Board) IsAttacked(sq, side int, occ BBoard) bool {
 	var isAttacked bool
 
@@ -177,27 +175,27 @@ func (b *Board) IsAttacked(sq, side int, occ BBoard) bool {
 	return isAttacked
 }
 
-// Determine if the king for the given side is in check
+// Determine if the king for the given side is in check.
 func (b *Board) IsChecked(side int) bool {
 	king := b.Pieces[side][KINGS].LS1B()
 
 	return b.IsAttacked(king, side, b.Occupancy[BOTH])
 }
 
-// Get a bitboard of all the squares attacked by the opposition
+// Get a bitboard of all the squares attacked by the opposition.
 func (b *Board) AttackedSquares(side int, occ BBoard) BBoard {
 	attacked := BBoard(0)
 
 	for sq := 0; sq < 64; sq++ {
 		if b.IsAttacked(sq, side, occ) {
-			attacked = attacked | SquareBitboards[sq]
+			attacked |= SquareBitboards[sq]
 		}
 	}
 
 	return attacked
 }
 
-// Generate all legal moves for the current side to move
+// Generate all legal moves for the current side to move.
 func (b *Board) MoveGen() []Move {
 	var from, to int
 	var pieces, attacks BBoard
@@ -259,7 +257,6 @@ func (b *Board) MoveGen() []Move {
 				umake()
 			}
 		}
-
 	} else {
 		pieces = b.Pieces[BLACK][PAWNS]
 		for pieces > 0 {
@@ -331,7 +328,6 @@ func (b *Board) MoveGen() []Move {
 				move |= IS_CAPTURE
 			}
 			moves = append(moves, move)
-
 		}
 	}
 
@@ -352,7 +348,6 @@ func (b *Board) MoveGen() []Move {
 				move |= IS_CAPTURE
 			}
 			moves = append(moves, move)
-
 		}
 	}
 
@@ -373,7 +368,6 @@ func (b *Board) MoveGen() []Move {
 				move |= IS_CAPTURE
 			}
 			moves = append(moves, move)
-
 		}
 	}
 
@@ -403,7 +397,7 @@ func (b *Board) MoveGen() []Move {
 	// return b.RemoveIllegal(moves)
 }
 
-// Return king moves for the current side to move
+// Return king moves for the current side to move.
 func (b *Board) MoveGenKing() []Move {
 	var from, to int
 	var pieces, attacks, attackedSquares BBoard
@@ -424,7 +418,6 @@ func (b *Board) MoveGenKing() []Move {
 					move |= IS_CAPTURE
 				}
 				moves = append(moves, move)
-
 			}
 		}
 
@@ -436,7 +429,6 @@ func (b *Board) MoveGenKing() []Move {
 				moves = append(moves, WCastleQueen)
 			}
 		}
-
 	} else {
 		attackedSquares = b.AttackedSquares(b.Side, b.Occupancy[BOTH]&^b.Pieces[b.Side][KINGS])
 		pieces = b.Pieces[BLACK][KINGS]
@@ -451,7 +443,6 @@ func (b *Board) MoveGenKing() []Move {
 					move |= IS_CAPTURE
 				}
 				moves = append(moves, move)
-
 			}
 		}
 
@@ -468,7 +459,7 @@ func (b *Board) MoveGenKing() []Move {
 	return moves
 }
 
-// Generate a function to return the board state the it's current state
+// Generate a function to return the board state the it's current state.
 func (b *Board) GetUnmake() func() {
 	copy := b.Copy()
 	return func() {
@@ -492,7 +483,7 @@ func (b *Board) MakeMove(move Move) func() {
 		b.HalfMoveCounter++
 	}
 
-	bitboard := b.GetBitBoard(move.Piece(), move)
+	bitboard := b.GetBitBoard(move.Piece())
 	switch {
 	case move.IsEnPassant():
 
@@ -535,7 +526,7 @@ func (b *Board) MakeMove(move Move) func() {
 	return umove
 }
 
-// Attempt to play a UCI move in position. Returns unmake closure and ok
+// Attempt to play a UCI move in position. Returns unmake closure and ok.
 func (b *Board) MoveUCI(uciMove string) (func(), bool) {
 	all := b.MoveGen()
 
@@ -561,8 +552,8 @@ func (b *Board) PlayMovesUCI(uciMoves string) bool {
 	return true
 }
 
-// Return a pointer to the bitboard of the piece moved
-func (b *Board) GetBitBoard(piece int, move Move) *BBoard {
+// Return a pointer to the bitboard of the piece moved.
+func (b *Board) GetBitBoard(piece int) *BBoard {
 	side := WHITE
 	if piece > 6 {
 		side = BLACK
@@ -570,7 +561,7 @@ func (b *Board) GetBitBoard(piece int, move Move) *BBoard {
 	return &b.Pieces[side][(piece-1)%6]
 }
 
-// Remove a piece captured by a move from the opposing bitboard
+// Remove a piece captured by a move from the opposing bitboard.
 func (b *Board) RemoveCaptured(sq int) {
 	b.Occupancy[b.Side^1].Clear(sq)
 	for piece := PAWNS; piece <= KINGS; piece++ {
@@ -578,7 +569,7 @@ func (b *Board) RemoveCaptured(sq int) {
 	}
 }
 
-// Make the complimentary rook move when castling
+// Make the complimentary rook move when castling.
 func (b *Board) CompleteCastling(move Move) {
 	bitboard := &b.Pieces[b.Side][ROOKS]
 	var rookMove Move
@@ -596,7 +587,7 @@ func (b *Board) CompleteCastling(move Move) {
 	bitboard.Clear(int(rookMove.From()))
 }
 
-// Get the piece at square as a collection of values: found, color, piece
+// Get the piece at square as a collection of values: found, color, piece.
 func (b *Board) PieceAtSquare(sq Square) (bool, int, int) {
 	for color := WHITE; color <= BLACK; color++ {
 		for pieceType := PAWNS; pieceType <= KINGS; pieceType++ {
@@ -609,14 +600,14 @@ func (b *Board) PieceAtSquare(sq Square) (bool, int, int) {
 	return false, 0, 0
 }
 
-// Replace a pawn on the 8th/1st rank with the promotion piece
+// Replace a pawn on the 8th/1st rank with the promotion piece.
 func (b *Board) Promote(move Move) {
 	if move.Promotion() == 0 {
 		return
 	}
 
 	var pawnBitBoard, promotionBitBoard *BBoard
-	pawnBitBoard = b.GetBitBoard(move.Piece(), move)
+	pawnBitBoard = b.GetBitBoard(move.Piece())
 	var pieceIdx int
 
 	switch move.Promotion() {

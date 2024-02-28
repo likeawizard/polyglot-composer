@@ -7,11 +7,11 @@ import (
 )
 
 type PlainPGN struct {
-	path   string
 	pgn    *bufio.Scanner
 	reader *ByteCountingReader
-	size   bytesize.ByteSize
 	close  closeFn
+	path   string
+	size   bytesize.ByteSize
 }
 
 func NewPlainPGN(path string) *PlainPGN {

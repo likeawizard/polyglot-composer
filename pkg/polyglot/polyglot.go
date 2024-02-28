@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"github.com/likeawizard/polyglot-composer/pkg/board"
-	_ "github.com/likeawizard/polyglot-composer/pkg/logger"
 	"github.com/likeawizard/polyglot-composer/pkg/pgn"
 )
 
@@ -37,9 +36,9 @@ const (
 
 var MoveLimit int
 
-type PolyglotBook struct {
-	lock sync.Mutex
+type Book struct {
 	book map[uint64][]polyEntry
+	lock sync.Mutex
 }
 
 type polyEntry struct {
@@ -47,8 +46,8 @@ type polyEntry struct {
 	weight uint64
 }
 
-func NewPolyglotBook() *PolyglotBook {
-	return &PolyglotBook{
+func NewPolyglotBook() *Book {
+	return &Book{
 		book: make(map[uint64][]polyEntry),
 	}
 }
@@ -71,10 +70,10 @@ func encodeBookEntry(key uint64, entry polyEntry) []byte {
 	binary.BigEndian.PutUint16(bw, uint16(entry.weight))
 	binary.BigEndian.PutUint32(pad, 0)
 
-	bytes := append(bk, bm...)
-	bytes = append(bytes, bw...)
-	bytes = append(bytes, pad...)
-	return bytes
+	bk = append(bk, bm...)
+	bk = append(bk, bw...)
+	bk = append(bk, pad...)
+	return bk
 }
 
 func polyMoveToUCI(move uint16) string {
@@ -88,7 +87,7 @@ func polyMoveToUCI(move uint16) string {
 	return fmt.Sprintf("%s%d%s%d%s", files[fromFile], fromRow+1, files[toFile], toRow+1, promoPiece[promo])
 }
 
-// Convert move to UCI move in general, castling moves are converted to polyglot castling move format ie e1g1 -> e1h1
+// Convert move to UCI move in general, castling moves are converted to polyglot castling move format ie e1g1 -> e1h1.
 func MoveToPolyMove(move board.Move) string {
 	switch move {
 	case board.WCastleKing:
@@ -104,12 +103,12 @@ func MoveToPolyMove(move board.Move) string {
 	}
 }
 
-func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
+func (pb *Book) AddFromPGN(pgn *pgn.PGN) {
 	b := &board.Board{}
 	b.Init()
 
 	movesSAN := pgn.RemoveAnnotations()
-	//Remove move counters and score at the end
+
 	re := regexp.MustCompile(`\d+\.\s|\s*1-0|\s*0-1|\s*1\/2-1\/2`)
 	movesSAN = re.ReplaceAllLiteralString(movesSAN, "")
 	SANs := strings.Fields(movesSAN)
@@ -134,24 +133,23 @@ func (pb *PolyglotBook) AddFromPGN(pgn *pgn.PGN) {
 	}
 }
 
-func (pb *PolyglotBook) AddMove(key uint64, move string, weight uint64) {
+func (pb *Book) AddMove(key uint64, move string, weight uint64) {
 	pb.lock.Lock()
 	defer pb.lock.Unlock()
-	moves, ok := pb.book[key]
-	if ok {
-		for i := 0; i < len(moves); i++ {
-			if moves[i].move == move {
-				moves[i].weight++
-				pb.book[key] = moves
-				return
-			}
-		}
-		moves = append(moves, polyEntry{move: move, weight: weight})
-		pb.book[key] = moves
-		return
-	} else {
+	moves, keyExist := pb.book[key]
+	if !keyExist {
 		pb.book[key] = []polyEntry{{move: move, weight: weight}}
 	}
+
+	for i := 0; i < len(moves); i++ {
+		if moves[i].move == move {
+			moves[i].weight++
+			pb.book[key] = moves
+			return
+		}
+	}
+	moves = append(moves, polyEntry{move: move, weight: weight})
+	pb.book[key] = moves
 }
 
 func UCIToPolyMove(move string) uint16 {
@@ -202,7 +200,7 @@ func UCIToPolyMove(move string) uint16 {
 	return polyMove
 }
 
-func LoadBook(path string) *PolyglotBook {
+func LoadBook(path string) *Book {
 	file, err := os.Open(path)
 	if err != nil {
 		fmt.Println("failed to open book: ", path)
@@ -226,11 +224,11 @@ func LoadBook(path string) *PolyglotBook {
 	return polyBook
 }
 
-func (pb *PolyglotBook) SaveBook(path string) {
+func (pb *Book) SaveBook(path string) {
 	pb.NormalizeAndOrder()
 	type orderedEntry struct {
-		key   uint64
 		entry []polyEntry
+		key   uint64
 	}
 	orderedBook := make([]orderedEntry, len(pb.book))
 	n := 0
@@ -330,8 +328,8 @@ func PolyZobrist(b *board.Board) uint64 {
 }
 
 // Building a book from a large number of games can exceed the limits of uint16.
-// Find entries where a weight exceeds this limit and normalize the whole entry
-func (pb *PolyglotBook) NormalizeAndOrder() {
+// Find entries where a weight exceeds this limit and normalize the whole entry.
+func (pb *Book) NormalizeAndOrder() {
 	normalize := func(entries []polyEntry) []polyEntry {
 		var i int
 		for i = len(entries) - 1; i >= 0; i-- {
